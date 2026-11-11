@@ -4,6 +4,10 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+// EDITOR TOOL: this file adds the setup buttons under Tools > Time Travel.
+// It runs only in Unity's Editor, not in the Windows application.
+// Gameplay code is in Assets/Scripts. Start reading TimeTravelManager.cs there.
+// Undo records allow Ctrl+Z/Cmd+Z to reverse scene setup changes.
 public static class TimeTravelSceneSetup
 {
     private const string ScenePath = "Assets/Scenes/MainScene.unity";
@@ -40,7 +44,10 @@ public static class TimeTravelSceneSetup
         Undo.IncrementCurrentGroup();
         int group = Undo.GetCurrentGroup();
         Undo.SetCurrentGroupName("Set Up Projection Settings");
-        root = root != null ? root : CreateRoot(scene, "ProjectionSettings");
+        if (root == null)
+        {
+            root = CreateRoot(scene, "ProjectionSettings");
+        }
         ProjectionDisplaySettings settings = root.GetComponent<ProjectionDisplaySettings>();
         if (settings == null)
         {
@@ -55,9 +62,13 @@ public static class TimeTravelSceneSetup
         EditorSceneManager.MarkSceneDirty(scene);
         Selection.activeGameObject = root;
         if (EditorSceneManager.SaveScene(scene))
+        {
             Debug.Log("Time Travel setup: Projection settings saved. Configure resolution, FOV, VSync, and optional second display in the Inspector.");
+        }
         else
+        {
             Debug.LogError("Time Travel setup: Save MainScene manually; automatic save failed.");
+        }
     }
 
     [MenuItem("Tools/Time Travel/Set Up Phase 5 Player Controls")]
@@ -121,9 +132,13 @@ public static class TimeTravelSceneSetup
         Undo.CollapseUndoOperations(group);
         EditorSceneManager.MarkSceneDirty(scene);
         if (EditorSceneManager.SaveScene(scene))
+        {
             Debug.Log("Time Travel setup: Player saved. WASD moves, mouse looks, Escape toggles cursor capture. T and E retain their existing functions.");
+        }
         else
+        {
             Debug.LogError("Time Travel setup: Save MainScene manually; automatic save failed.");
+        }
     }
 
     [MenuItem("Tools/Time Travel/Set Up Phase 4 Interaction Test")]
@@ -151,7 +166,11 @@ public static class TimeTravelSceneSetup
             return;
         }
 
-        TimeTravelManager manager = managerRoot != null ? managerRoot.GetComponent<TimeTravelManager>() : null;
+        TimeTravelManager manager = null;
+        if (managerRoot != null)
+        {
+            manager = managerRoot.GetComponent<TimeTravelManager>();
+        }
         Camera camera = Camera.main;
         if (manager == null || past == null || future == null || camera == null ||
             camera.gameObject.scene != scene)
@@ -172,7 +191,9 @@ public static class TimeTravelSceneSetup
         Undo.SetCurrentGroupName("Create Time Travel Interaction Test");
         TimeTravelState state = managerRoot.GetComponent<TimeTravelState>();
         if (state == null)
+        {
             state = Undo.AddComponent<TimeTravelState>(managerRoot);
+        }
 
         PlayerInteractor interactor = camera.GetComponent<PlayerInteractor>();
         if (interactor == null)
@@ -210,11 +231,17 @@ public static class TimeTravelSceneSetup
         Undo.CollapseUndoOperations(group);
         EditorSceneManager.MarkSceneDirty(scene);
         if (EditorSceneManager.SaveScene(scene))
+        {
             Debug.Log("Time Travel setup: Phase 4 saved. Test future before E, then return to past, press E, and check future again.");
+        }
         else
+        {
             Debug.LogError("Time Travel setup: Save MainScene manually; automatic save failed.");
+        }
     }
 
+    // SerializedObject edits an Inspector field by its C# field name.
+    // These names must match the fields in Assets/Scripts.
     private static void SetReference(UnityEngine.Object component, string field, UnityEngine.Object value)
     {
         SerializedObject serialized = new SerializedObject(component);
@@ -245,7 +272,11 @@ public static class TimeTravelSceneSetup
             return;
         }
 
-        TimeTravelManager manager = managerRoot != null ? managerRoot.GetComponent<TimeTravelManager>() : null;
+        TimeTravelManager manager = null;
+        if (managerRoot != null)
+        {
+            manager = managerRoot.GetComponent<TimeTravelManager>();
+        }
         if (manager == null)
         {
             Debug.LogError("Time Travel setup: Run Phase 2 setup first.");
@@ -255,7 +286,10 @@ public static class TimeTravelSceneSetup
         Undo.IncrementCurrentGroup();
         int undoGroup = Undo.GetCurrentGroup();
         Undo.SetCurrentGroupName("Create Timeline Object Tests");
-        examples = examples != null ? examples : CreateRoot(scene, "TimelineObjectTests");
+        if (examples == null)
+        {
+            examples = CreateRoot(scene, "TimelineObjectTests");
+        }
         CreateTimelineExample(examples.transform, manager, "PastOnly", true, false,
             new Vector3(-2f, 1.5f, 0f), new Vector3(-2f, 1.5f, 0f));
         CreateTimelineExample(examples.transform, manager, "FutureOnly", false, true,
@@ -265,9 +299,13 @@ public static class TimeTravelSceneSetup
         Undo.CollapseUndoOperations(undoGroup);
         EditorSceneManager.MarkSceneDirty(scene);
         if (EditorSceneManager.SaveScene(scene))
+        {
             Debug.Log("Time Travel setup: Phase 3 examples saved. Press Play and T to test.");
+        }
         else
+        {
             Debug.LogError("Time Travel setup: Save MainScene manually; automatic save failed.");
+        }
     }
 
     private static void CreateTimelineExample(Transform parent, TimeTravelManager manager,
@@ -275,7 +313,9 @@ public static class TimeTravelSceneSetup
     {
         // Existing examples are left intact, including any Inspector edits.
         if (parent.Find(name) != null)
+        {
             return;
+        }
 
         GameObject controller = new GameObject(name);
         controller.transform.SetParent(parent, false);
@@ -283,7 +323,14 @@ public static class TimeTravelSceneSetup
         GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
         cube.name = "Target";
         cube.transform.SetParent(controller.transform, false);
-        cube.transform.localPosition = pastExists ? pastPosition : futurePosition;
+        if (pastExists)
+        {
+            cube.transform.localPosition = pastPosition;
+        }
+        else
+        {
+            cube.transform.localPosition = futurePosition;
+        }
         cube.transform.localScale = Vector3.one * 0.6f;
         cube.SetActive(pastExists);
         Undo.RegisterCreatedObjectUndo(cube, "Create Timeline Object Target");
@@ -296,9 +343,18 @@ public static class TimeTravelSceneSetup
         for (int i = 0; i < 2; i++)
         {
             SerializedProperty state = states.GetArrayElementAtIndex(i);
-            state.FindPropertyRelative("exists").boolValue = i == 0 ? pastExists : futureExists;
+            // Entry 0 is Past and entry 1 is Future, matching the component defaults.
+            if (i == 0)
+            {
+                state.FindPropertyRelative("exists").boolValue = pastExists;
+                state.FindPropertyRelative("localPosition").vector3Value = pastPosition;
+            }
+            else
+            {
+                state.FindPropertyRelative("exists").boolValue = futureExists;
+                state.FindPropertyRelative("localPosition").vector3Value = futurePosition;
+            }
             state.FindPropertyRelative("applyLocalTransform").boolValue = true;
-            state.FindPropertyRelative("localPosition").vector3Value = i == 0 ? pastPosition : futurePosition;
         }
         serialized.ApplyModifiedProperties();
     }
@@ -333,13 +389,24 @@ public static class TimeTravelSceneSetup
         int undoGroup = Undo.GetCurrentGroup();
         Undo.SetCurrentGroupName("Set Up Time Travel Test Scene");
 
-        managerObject = managerObject != null ? managerObject : CreateRoot(scene, "TimeTravelManager");
-        past = past != null ? past : CreateRoot(scene, "PastWorld");
-        future = future != null ? future : CreateRoot(scene, "FutureWorld");
+        if (managerObject == null)
+        {
+            managerObject = CreateRoot(scene, "TimeTravelManager");
+        }
+        if (past == null)
+        {
+            past = CreateRoot(scene, "PastWorld");
+        }
+        if (future == null)
+        {
+            future = CreateRoot(scene, "FutureWorld");
+        }
 
         TimeTravelManager manager = managerObject.GetComponent<TimeTravelManager>();
         if (manager == null)
+        {
             manager = Undo.AddComponent<TimeTravelManager>(managerObject);
+        }
 
         // Use serialized properties so the runtime component needs no Editor-only API.
         SerializedObject serializedManager = new SerializedObject(manager);
@@ -377,9 +444,13 @@ public static class TimeTravelSceneSetup
         foreach (GameObject root in scene.GetRootGameObjects())
         {
             if (root.name != name)
+            {
                 continue;
+            }
             if (match != null)
+            {
                 throw new InvalidOperationException($"Time Travel setup: Multiple roots named {name}. Rename duplicates first.");
+            }
             match = root;
         }
         return match;
@@ -401,7 +472,9 @@ public static class TimeTravelSceneSetup
             index++;
 
         if (index == timelines.arraySize)
+        {
             timelines.arraySize++;
+        }
 
         SerializedProperty entry = timelines.GetArrayElementAtIndex(index);
         entry.FindPropertyRelative("timeline").intValue = (int)id;
@@ -411,7 +484,9 @@ public static class TimeTravelSceneSetup
     private static void CreateTestCube(Transform parent, string name, Vector3 localPosition)
     {
         if (parent.Find(name) != null)
+        {
             return;
+        }
 
         GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
         cube.name = name;

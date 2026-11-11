@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+// An enum gives each time period a name instead of using unexplained numbers.
 public enum TimelineId
 {
     Past,
@@ -9,10 +10,11 @@ public enum TimelineId
 }
 
 [DisallowMultipleComponent]
-public sealed class TimeTravelManager : MonoBehaviour
+public class TimeTravelManager : MonoBehaviour
 {
+    // One Inspector entry connects a timeline name to its parent GameObject.
     [Serializable]
-    private sealed class TimelineWorld
+    private class TimelineWorld
     {
         public TimelineId timeline;
         public GameObject root;
@@ -23,16 +25,21 @@ public sealed class TimeTravelManager : MonoBehaviour
         }
     }
 
+    // SerializeField makes a private variable editable in the Unity Inspector.
     [SerializeField] private TimelineWorld[] timelines =
     {
         new TimelineWorld(TimelineId.Past),
         new TimelineWorld(TimelineId.Future)
     };
 
+    // Other scripts can read these properties, but only this manager can change them.
     public TimelineId CurrentTimeline { get; private set; } = TimelineId.Past;
     public bool IsInitialized { get; private set; }
+    // Other components subscribe to this notification when they need timeline updates.
+    // Action<TimelineId> means each listener receives the new timeline name.
     public event Action<TimelineId> TimelineChanged;
 
+    // Unity calls Start once when this component first begins running.
     private void Start()
     {
         if (!SetTimeline(TimelineId.Past))
@@ -42,21 +49,61 @@ public sealed class TimeTravelManager : MonoBehaviour
         }
     }
 
+    // Unity calls Update once every frame. Check whether T was pressed this frame.
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current.tKey.wasPressedThisFrame)
+        if (Keyboard.current == null)
         {
-            int currentIndex = Array.FindIndex(timelines, entry => entry.timeline == CurrentTimeline);
-            SetTimeline(timelines[(currentIndex + 1) % timelines.Length].timeline);
+            return;
         }
+
+        if (Keyboard.current.tKey.wasPressedThisFrame)
+        {
+            SwitchToNextTimeline();
+        }
+    }
+
+    private void SwitchToNextTimeline()
+    {
+        if (!ValidateConfiguration())
+        {
+            return;
+        }
+
+        int currentIndex = FindTimelineIndex(CurrentTimeline);
+        int nextIndex = currentIndex + 1;
+
+        // After the final entry, start again at the first entry.
+        if (nextIndex >= timelines.Length)
+        {
+            nextIndex = 0;
+        }
+
+        SetTimeline(timelines[nextIndex].timeline);
+    }
+
+    private int FindTimelineIndex(TimelineId timeline)
+    {
+        for (int i = 0; i < timelines.Length; i++)
+        {
+            if (timelines[i].timeline == timeline)
+            {
+                return i;
+            }
+        }
+
+        // -1 means no matching entry was found.
+        return -1;
     }
 
     public bool SetTimeline(TimelineId timeline)
     {
         if (!ValidateConfiguration())
+        {
             return false;
+        }
 
-        int targetIndex = Array.FindIndex(timelines, entry => entry.timeline == timeline);
+        int targetIndex = FindTimelineIndex(timeline);
         if (targetIndex < 0)
         {
             Debug.LogError($"TimeTravelManager: No world assigned for {timeline}.", this);
@@ -64,23 +111,32 @@ public sealed class TimeTravelManager : MonoBehaviour
         }
 
         if (IsInitialized && CurrentTimeline == timeline)
+        {
             return true;
+        }
 
         // Disable other worlds first so their renderers, colliders, and scripts stop together.
         for (int i = 0; i < timelines.Length; i++)
         {
             if (i != targetIndex)
+            {
                 timelines[i].root.SetActive(false);
+            }
         }
 
         CurrentTimeline = timeline;
         timelines[targetIndex].root.SetActive(true);
         IsInitialized = true;
         Debug.Log($"TimeTravelManager: Active timeline = {CurrentTimeline}.", this);
-        TimelineChanged?.Invoke(CurrentTimeline);
+        // Notify any components that are currently listening.
+        if (TimelineChanged != null)
+        {
+            TimelineChanged(CurrentTimeline);
+        }
         return true;
     }
 
+    // Check Inspector assignments before changing which world is active.
     private bool ValidateConfiguration()
     {
         if (timelines == null || timelines.Length < 2)

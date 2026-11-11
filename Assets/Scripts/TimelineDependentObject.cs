@@ -4,10 +4,10 @@ using UnityEngine.Events;
 
 // Keep this controller active; assign a separate child as the target it hides or moves.
 [DisallowMultipleComponent]
-public sealed class TimelineDependentObject : MonoBehaviour
+public class TimelineDependentObject : MonoBehaviour
 {
     [Serializable]
-    private sealed class TimelineState
+    private class TimelineState
     {
         public TimelineId timeline;
         public bool exists = true;
@@ -38,16 +38,22 @@ public sealed class TimelineDependentObject : MonoBehaviour
             return;
         }
 
+        // += starts listening: call ApplyTimeline whenever the manager changes time.
         manager.TimelineChanged += ApplyTimeline;
         // Handles components enabled after the manager's initial timeline event.
         if (manager.IsInitialized)
+        {
             ApplyTimeline(manager.CurrentTimeline);
+        }
     }
 
+    // Stop listening when this component is disabled or removed.
     private void OnDisable()
     {
         if (manager != null)
+        {
             manager.TimelineChanged -= ApplyTimeline;
+        }
     }
 
     private void ApplyTimeline(TimelineId timeline)
@@ -58,7 +64,15 @@ public sealed class TimelineDependentObject : MonoBehaviour
             return;
         }
 
-        TimelineState state = Array.Find(states, entry => entry.timeline == timeline);
+        TimelineState state = null;
+        for (int i = 0; i < states.Length; i++)
+        {
+            if (states[i].timeline == timeline)
+            {
+                state = states[i];
+                break;
+            }
+        }
         // A missing entry also means this object does not exist in that timeline.
         if (state == null || !state.exists)
         {
@@ -75,7 +89,11 @@ public sealed class TimelineDependentObject : MonoBehaviour
         // SetActive controls child renderers, colliders, and behaviours together.
         // Individual collider.enabled settings are preserved.
         target.SetActive(true);
-        state.onApplied?.Invoke();
+        // Run any additional responses assigned in the Inspector.
+        if (state.onApplied != null)
+        {
+            state.onApplied.Invoke();
+        }
     }
 
     private bool ValidateConfiguration()
