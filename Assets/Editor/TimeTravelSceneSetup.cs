@@ -372,11 +372,13 @@ public static class TimeTravelSceneSetup
         // Check for ambiguous names before making any scene changes.
         GameObject managerObject;
         GameObject past;
+        GameObject present;
         GameObject future;
         try
         {
             managerObject = FindRoot(scene, "TimeTravelManager");
             past = FindRoot(scene, "PastWorld");
+            present = FindRoot(scene, "PresentWorld");
             future = FindRoot(scene, "FutureWorld");
         }
         catch (InvalidOperationException error)
@@ -397,6 +399,10 @@ public static class TimeTravelSceneSetup
         {
             past = CreateRoot(scene, "PastWorld");
         }
+        if (present == null)
+        {
+            present = CreateRoot(scene, "PresentWorld");
+        }
         if (future == null)
         {
             future = CreateRoot(scene, "FutureWorld");
@@ -413,15 +419,27 @@ public static class TimeTravelSceneSetup
         SerializedProperty timelines = serializedManager.FindProperty("timelines");
         AssignTimeline(timelines, TimelineId.Past, past);
         AssignTimeline(timelines, TimelineId.Future, future);
+        AssignTimeline(timelines, TimelineId.Present, present);
+        // Keep the T-key cycle chronological, including when upgrading two worlds.
+        for (int i = 0; i < timelines.arraySize; i++)
+        {
+            if (timelines.GetArrayElementAtIndex(i).FindPropertyRelative("timeline").intValue == (int)TimelineId.Present)
+            {
+                timelines.MoveArrayElement(i, 1);
+                break;
+            }
+        }
         serializedManager.ApplyModifiedProperties();
 
         CreateTestCube(past.transform, "PastTestCube", new Vector3(-1f, 0f, 0f));
+        CreateTestCube(present.transform, "PresentTestCube", Vector3.zero);
         CreateTestCube(future.transform, "FutureTestCube", new Vector3(1f, 0f, 0f));
 
         Undo.RecordObject(manager, "Enable Time Travel Manager");
         manager.enabled = true;
         SetActive(managerObject, true);
         SetActive(past, true);
+        SetActive(present, false);
         SetActive(future, false);
         Undo.CollapseUndoOperations(undoGroup);
 

@@ -7,7 +7,7 @@ public class PlayerTestControls : MonoBehaviour
 {
     [SerializeField] private Camera viewCamera;
     [SerializeField, Min(0f)] private float movementSpeed = 3f;
-    [SerializeField, Min(0f)] private float mouseSensitivity = 0.1f;
+    [SerializeField, Min(0f)] private float mouseSensitivity = 0.25f;
     [SerializeField, Range(1f, 89f)] private float pitchLimit = 80f;
     [SerializeField, Min(0f)] private float gravity = 20f;
 

@@ -5,8 +5,10 @@ using UnityEngine.InputSystem;
 // An enum gives each time period a name instead of using unexplained numbers.
 public enum TimelineId
 {
-    Past,
-    Future
+    // Explicit values preserve existing scene and Inspector assignments.
+    Past = 0,
+    Present = 2,
+    Future = 1
 }
 
 [DisallowMultipleComponent]
@@ -29,6 +31,7 @@ public class TimeTravelManager : MonoBehaviour
     [SerializeField] private TimelineWorld[] timelines =
     {
         new TimelineWorld(TimelineId.Past),
+        new TimelineWorld(TimelineId.Present),
         new TimelineWorld(TimelineId.Future)
     };
 
