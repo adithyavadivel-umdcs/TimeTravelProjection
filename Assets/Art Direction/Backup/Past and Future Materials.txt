@@ -1,0 +1,27 @@
+TIME TRAVEL PROJECTION BACKUP
+Past and Future art direction
+
+Shared layout
+Use the original hand-drawn city plan as the reference. Buildings
+stay on their lots, the main street stays open, and the plaza stays
+in the same place. The concept images are captures of the hand-built
+ProBuilder models in the Unity Editor.
+
+Past village
+Limestone for low walls, Charcoal for pitched roofs, Sage for the
+village green and trees, and Slate for the well and buggy body.
+Past Earth colors the dirt road and Past Chestnut colors the horse.
+Drag cubes over the house footprints and place prisms on top. Use
+a shallow cube for the road, cones over cube trunks for the four
+trees, and a cylinder for the well. The buggy uses a cube body,
+a prism hood, and four duplicated cylinder wheels. Small cubes
+make up the horse and the two hitch rails.
+
+Future skyline
+Slate for tall towers and lower buildings, Limestone for inset
+tower crowns and the beacon, Charcoal for the road, and Sage for the
+plaza. Drag cubes over the same lots, set different heights, and add
+one cone as the plaza landmark.
+
+The reusable material swatches are under Assets > Materials.
+The shared sky and ambience carry through all three timelines.

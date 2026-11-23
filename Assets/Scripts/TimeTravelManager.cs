@@ -27,6 +27,9 @@ public class TimeTravelManager : MonoBehaviour
         }
     }
 
+    [SerializeField] private Renderer sharedFloorRenderer;
+    [SerializeField] private bool pastHasOwnGround;
+
     // SerializeField makes a private variable editable in the Unity Inspector.
     [SerializeField] private TimelineWorld[] timelines =
     {
@@ -128,6 +131,12 @@ public class TimeTravelManager : MonoBehaviour
         }
 
         CurrentTimeline = timeline;
+        if (sharedFloorRenderer != null)
+        {
+            // Keep the shared floor collider available during timeline transitions.
+            sharedFloorRenderer.enabled = timeline != TimelineId.Future &&
+                (timeline != TimelineId.Past || !pastHasOwnGround);
+        }
         timelines[targetIndex].root.SetActive(true);
         IsInitialized = true;
         Debug.Log($"TimeTravelManager: Active timeline = {CurrentTimeline}.", this);

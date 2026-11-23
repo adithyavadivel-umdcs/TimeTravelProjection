@@ -5,13 +5,17 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-// Editor-only tool for creating a macOS application from MainScene.
 public static class MacPrototypeBuilder
 {
-    private const string MainScenePath = "Assets/Scenes/MainScene.unity";
+    private const string MainScenePath = MainScenePlayMode.ScenePath;
 
     [MenuItem("Tools/Time Travel/Build macOS Prototype")]
-    public static void BuildMac()
+    public static void BuildMac() => Build(MainScenePath, "macOS", BuildOptions.Development);
+
+    [MenuItem("Tools/Time Travel/Build macOS Projection")]
+    public static void BuildMacProjection() => Build(MainScenePath, "macOS Projection", BuildOptions.None);
+
+    private static void Build(string scenePath, string outputDirectory, BuildOptions buildOptions)
     {
 #if !UNITY_EDITOR_OSX
         Debug.LogError("macOS build: Run this command in Unity Editor on a Mac.");
@@ -31,9 +35,9 @@ public static class MacPrototypeBuilder
             return;
         }
 
-        if (!File.Exists(MainScenePath))
+        if (!File.Exists(scenePath))
         {
-            Debug.LogError("macOS build: MainScene was not found at " + MainScenePath);
+            Debug.LogError("macOS build: Scene was not found at " + scenePath);
             return;
         }
 
@@ -58,21 +62,21 @@ public static class MacPrototypeBuilder
         UnityEditor.OSXStandalone.UserBuildSettings.createXcodeProject = false;
 
         string projectFolder = Directory.GetParent(Application.dataPath).FullName;
-        string outputFolder = Path.Combine(projectFolder, "Builds", "macOS");
+        string outputFolder = Path.Combine(projectFolder, "Builds", outputDirectory);
         Directory.CreateDirectory(outputFolder);
 
         BuildPlayerOptions options = new BuildPlayerOptions();
-        options.scenes = new string[] { MainScenePath };
+        options.scenes = new[] { scenePath };
         options.locationPathName = Path.Combine(outputFolder, "TimeTravelProjection.app");
         options.target = BuildTarget.StandaloneOSX;
-        options.options = BuildOptions.Development;
+        options.options = buildOptions;
 
-        Debug.Log("macOS build: Building MainScene. Output: " + options.locationPathName);
+        Debug.Log($"macOS build: Building {scenePath}. Output: {options.locationPathName}");
         BuildReport report = BuildPipeline.BuildPlayer(options);
 
         if (report.summary.result == BuildResult.Succeeded)
         {
-            Debug.Log("macOS build succeeded. Open Builds/macOS/TimeTravelProjection.app to test.");
+            Debug.Log("macOS build succeeded. Open " + options.locationPathName + " to test.");
             EditorUtility.RevealInFinder(options.locationPathName);
         }
         else

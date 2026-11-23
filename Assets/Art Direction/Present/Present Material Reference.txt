@@ -1,0 +1,24 @@
+PRESENT WORLD
+Material and surface reference
+
+CONCEPT
+The hand-drawn city plan is the concept image. Keep the central street
+open, use tall rectangular towers on the marked lots, and make the
+plaza a simple green space. Use flat colors so the silhouettes and
+window bands read clearly from a distance.
+
+PALETTE
+Open Assets > Materials in Unity to see the material swatches.
+
+Present Limestone    Warm beige     Tower walls
+Present Slate        Blue-gray      Wraparound windows and car cabins
+Present Charcoal     Dark gray      Road, tires, and tree trunk
+Present Sage         Muted green    Plaza and tree canopy
+New Material         Off-white      Ground surrounding the road
+
+SURFACE TREATMENT
+The manual scene uses flat materials. Use thin boxes for the window
+bands, a flat box for the road, and a cube and cone for the plaza tree.
+
+SCENE
+Assets > Scenes > Present ProBuilder Study

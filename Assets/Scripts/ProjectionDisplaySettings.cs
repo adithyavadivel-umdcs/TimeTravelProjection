@@ -1,4 +1,8 @@
+using System;
+using System.Globalization;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 [DisallowMultipleComponent]
 public class ProjectionDisplaySettings : MonoBehaviour
@@ -62,11 +66,31 @@ public class ProjectionDisplaySettings : MonoBehaviour
 
     private void ApplyDisplaySettings()
     {
+        string[] arguments = Environment.GetCommandLineArgs();
+        bool projectToSecondDisplay = useSecondDisplay;
+        int displayArgument = Array.IndexOf(arguments, "-projection-display");
+        if (displayArgument >= 0)
+        {
+            if (displayArgument + 1 < arguments.Length &&
+                int.TryParse(arguments[displayArgument + 1], out int displayNumber) &&
+                (displayNumber == 1 || displayNumber == 2))
+            {
+                projectToSecondDisplay = displayNumber == 2;
+            }
+            else
+            {
+                Debug.LogWarning("ProjectionDisplaySettings: Use -projection-display 1 or 2.", this);
+            }
+        }
+
+        ApplyRenderScaleOverride(arguments);
+        Screen.sleepTimeout = SleepTimeout.NeverSleep;
+
         int displayIndex = 0;
         int safeWidth = Mathf.Max(320, width);
         int safeHeight = Mathf.Max(240, height);
 
-        if (useSecondDisplay)
+        if (projectToSecondDisplay)
         {
             if (Display.displays.Length > 1)
             {
@@ -84,7 +108,7 @@ public class ProjectionDisplaySettings : MonoBehaviour
         if (displayIndex == 0)
         {
             FullScreenMode mode = FullScreenMode.Windowed;
-            if (fullscreen)
+            if (fullscreen && Array.IndexOf(arguments, "-projection-windowed") < 0)
             {
                 mode = FullScreenMode.FullScreenWindow;
             }
@@ -93,8 +117,36 @@ public class ProjectionDisplaySettings : MonoBehaviour
         }
 
         Debug.Log($"ProjectionDisplaySettings: Camera output uses display {displayIndex + 1}. " +
-            $"Requested resolution {width}x{height}, FOV {fieldOfView}. " +
+            $"Configured resolution {safeWidth}x{safeHeight}, vertical FOV {viewCamera.fieldOfView}. " +
             "Restart after changing secondary display activation settings.", this);
+    }
+
+    private void ApplyRenderScaleOverride(string[] arguments)
+    {
+        int argument = Array.IndexOf(arguments, "-projection-render-scale");
+        if (argument < 0)
+        {
+            return;
+        }
+
+        if (argument + 1 >= arguments.Length ||
+            !float.TryParse(arguments[argument + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out float scale) ||
+            float.IsNaN(scale) || scale < 0.5f || scale > 1f)
+        {
+            Debug.LogWarning("ProjectionDisplaySettings: Use a render scale between 0.5 and 1.0.", this);
+            return;
+        }
+
+        if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset pipeline)
+        {
+            // Standalone only. This changes internal render resolution without saving a project asset.
+            pipeline.renderScale = scale;
+            Debug.Log($"ProjectionDisplaySettings: Internal render scale set to {scale:P0}.", this);
+        }
+        else
+        {
+            Debug.LogWarning("ProjectionDisplaySettings: Render scale requires URP.", this);
+        }
     }
 
     private void ActivateSecondDisplay(int requestedWidth, int requestedHeight)

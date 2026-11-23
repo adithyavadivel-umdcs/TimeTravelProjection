@@ -8,10 +8,15 @@ using UnityEngine;
 // Editor-only tool. This script is not included in the finished application.
 public static class WindowsPrototypeBuilder
 {
-    private const string MainScenePath = "Assets/Scenes/MainScene.unity";
+    private const string MainScenePath = MainScenePlayMode.ScenePath;
 
     [MenuItem("Tools/Time Travel/Build Windows Prototype")]
-    public static void BuildWindows()
+    public static void BuildWindows() => Build(MainScenePath, "Windows", BuildOptions.Development);
+
+    [MenuItem("Tools/Time Travel/Build Windows Projection")]
+    public static void BuildWindowsProjection() => Build(MainScenePath, "Windows Projection", BuildOptions.None);
+
+    private static void Build(string scenePath, string outputDirectory, BuildOptions buildOptions)
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
         {
@@ -30,9 +35,9 @@ public static class WindowsPrototypeBuilder
             return;
         }
 
-        if (!File.Exists(MainScenePath))
+        if (!File.Exists(scenePath))
         {
-            Debug.LogError("Windows build: MainScene was not found at " + MainScenePath);
+            Debug.LogError("Windows build: Scene was not found at " + scenePath);
             return;
         }
 
@@ -44,7 +49,7 @@ public static class WindowsPrototypeBuilder
 
         // Application.dataPath is the project's Assets folder.
         string projectFolder = Directory.GetParent(Application.dataPath).FullName;
-        string outputFolder = Path.Combine(projectFolder, "Builds", "Windows");
+        string outputFolder = Path.Combine(projectFolder, "Builds", outputDirectory);
         Directory.CreateDirectory(outputFolder);
 
         // Mono supports building this Windows prototype from the current Mac.
@@ -61,18 +66,17 @@ public static class WindowsPrototypeBuilder
         PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.Mono2x);
 
         BuildPlayerOptions options = new BuildPlayerOptions();
-        options.scenes = new string[] { MainScenePath };
+        options.scenes = new[] { scenePath };
         options.locationPathName = Path.Combine(outputFolder, "TimeTravelProjection.exe");
         options.target = BuildTarget.StandaloneWindows64;
-        // Development builds provide useful logs while the group tests the prototype.
-        options.options = BuildOptions.Development;
+        options.options = buildOptions;
 
-        Debug.Log("Windows build: Building MainScene. Output: " + options.locationPathName);
+        Debug.Log($"Windows build: Building {scenePath}. Output: {options.locationPathName}");
         BuildReport report = BuildPipeline.BuildPlayer(options);
 
         if (report.summary.result == BuildResult.Succeeded)
         {
-            Debug.Log("Windows build succeeded. Copy the ENTIRE Builds/Windows folder " +
+            Debug.Log("Windows build succeeded. Copy the entire " + outputFolder + " folder " +
                 "to a Windows computer, then run TimeTravelProjection.exe.");
             EditorUtility.RevealInFinder(options.locationPathName);
         }
