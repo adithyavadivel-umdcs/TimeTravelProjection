@@ -5,16 +5,21 @@ using UnityEngine.InputSystem;
 [DisallowMultipleComponent]
 public class PlayerTestControls : MonoBehaviour
 {
+    private const float MouseLookBoost = 1.6f;
+
     [SerializeField] private Camera viewCamera;
     [SerializeField, Min(0f)] private float movementSpeed = 3f;
     [SerializeField, Min(0f)] private float mouseSensitivity = 0.25f;
     [SerializeField, Range(1f, 89f)] private float pitchLimit = 80f;
     [SerializeField, Min(0f)] private float gravity = 20f;
+    [SerializeField, Min(0f)] private float flightSpeed = 6f;
+    [SerializeField, Min(0f)] private float keyboardLookSpeed = 100f;
 
     private CharacterController controller;
     private float pitch;
     private float verticalSpeed;
     private bool cursorCaptured;
+    private bool isFlying;
 
     private void Awake()
     {
@@ -42,13 +47,19 @@ public class PlayerTestControls : MonoBehaviour
         bool canControlPlayer = Application.isFocused && cursorCaptured &&
             Cursor.lockState == CursorLockMode.Locked;
 
-        if (canControlPlayer)
+        Keyboard keyboard = canControlPlayer ? Keyboard.current : null;
+        if (keyboard != null && keyboard.fKey.wasPressedThisFrame)
         {
-            RotateCamera();
+            isFlying = !isFlying;
+            verticalSpeed = 0f;
         }
 
-        // Continue applying gravity even when the mouse is released.
-        MovePlayer(canControlPlayer);
+        if (canControlPlayer)
+        {
+            RotateCamera(keyboard);
+        }
+
+        MovePlayer(keyboard);
     }
 
     private void CheckEscapeKey()
@@ -64,54 +75,53 @@ public class PlayerTestControls : MonoBehaviour
         }
     }
 
-    private void RotateCamera()
+    private void RotateCamera(Keyboard keyboard)
     {
-        if (Mouse.current == null)
+        Vector2 look = Mouse.current != null
+            ? Mouse.current.delta.ReadValue() * (mouseSensitivity * MouseLookBoost)
+            : Vector2.zero;
+        if (keyboard != null)
         {
+            Vector2 keyboardLook = new Vector2(
+                Axis(keyboard.lKey.isPressed, keyboard.jKey.isPressed),
+                Axis(keyboard.iKey.isPressed, keyboard.kKey.isPressed));
+            look += keyboardLook * (keyboardLookSpeed * Time.deltaTime);
+        }
+
+        transform.Rotate(0f, look.x, 0f);
+        pitch = Mathf.Clamp(pitch - look.y, -pitchLimit, pitchLimit);
+        viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+    }
+
+    private static float Axis(bool positive, bool negative)
+    {
+        return (positive ? 1f : 0f) - (negative ? 1f : 0f);
+    }
+
+    private void MovePlayer(Keyboard keyboard)
+    {
+        Vector3 input = Vector3.zero;
+
+        if (keyboard != null)
+        {
+            input.x = Axis(keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed,
+                keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed);
+            input.z = Axis(keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed,
+                keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed);
+            if (isFlying)
+            {
+                input.y = Axis(keyboard.spaceKey.isPressed,
+                    keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed);
+            }
+        }
+
+        Vector3 direction = transform.TransformDirection(Vector3.ClampMagnitude(input, 1f));
+        if (isFlying)
+        {
+            controller.Move(direction * (flightSpeed * Time.deltaTime));
             return;
         }
 
-        Vector2 mouseMovement = Mouse.current.delta.ReadValue();
-        float horizontalLook = mouseMovement.x * mouseSensitivity;
-        float verticalLook = mouseMovement.y * mouseSensitivity;
-
-        // Turn the whole player left/right; tilt only the camera up/down.
-        transform.Rotate(0f, horizontalLook, 0f);
-        pitch = pitch - verticalLook;
-        pitch = Mathf.Clamp(pitch, -pitchLimit, pitchLimit);
-        viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
-
-        // Mouse delta already measures movement this frame. It needs no deltaTime.
-    }
-
-    private void MovePlayer(bool canControlPlayer)
-    {
-        Vector2 input = Vector2.zero;
-        Keyboard keyboard = Keyboard.current;
-
-        if (canControlPlayer && keyboard != null)
-        {
-            if (keyboard.wKey.isPressed)
-            {
-                input.y = input.y + 1f;
-            }
-            if (keyboard.sKey.isPressed)
-            {
-                input.y = input.y - 1f;
-            }
-            if (keyboard.dKey.isPressed)
-            {
-                input.x = input.x + 1f;
-            }
-            if (keyboard.aKey.isPressed)
-            {
-                input.x = input.x - 1f;
-            }
-        }
-
-        // Prevent diagonal movement from being faster than straight movement.
-        input = Vector2.ClampMagnitude(input, 1f);
-        Vector3 direction = transform.right * input.x + transform.forward * input.y;
         Vector3 velocity = direction * movementSpeed;
 
         if (controller.isGrounded && verticalSpeed < 0f)

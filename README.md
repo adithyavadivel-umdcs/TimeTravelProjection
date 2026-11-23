@@ -21,8 +21,10 @@ The project downloads into a `TimeTravelProjection` folder in your current direc
 4. Press **Play** and click the **Game** view. Unity automatically starts
    `Assets/Scenes/MainScene.unity` in Past, even if another scene is open for editing.
 
-Controls: **WASD** to move, **mouse** to look, **T** to cycle Past → Present → Future → Past,
-**E** to interact, and **Escape** to release or capture the cursor.
+- **WASD** or **arrow keys** to move, **mouse** or **I/J/K/L** to look around.
+- **F** to toggle flight. While flying, hold **Space** to rise or **Ctrl** to descend.
+- **T** to cycle Past → Present → Future → Past, **E** to interact, and
+  **Escape** to release or capture the cursor.
 
 ## Run as a macOS application
 
